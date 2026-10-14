@@ -2925,7 +2925,9 @@ function phaseDragReport(info){
 }
 function phaseDragPoint(event){
  const p=phaseCoordinates(event),q=phaseDrag;
- return {x:q.origin.x+p.x-q.down.x,y:q.origin.y+p.y-q.down.y};
+ // Sur écran tactile, le point d'arrivée est au-dessus du doigt : le socle reste visible.
+ const offset=q.touchOffset||0;
+ return {x:q.origin.x+p.x-q.down.x,y:q.origin.y+p.y-q.down.y-offset};
 }
 function phaseDragDown(e){
  if(phaseDrag||phaseState.status!=='movement'||(e.pointerType==='mouse'&&e.button!==0))return;
@@ -2934,7 +2936,7 @@ function phaseDragDown(e){
  if(!u||!eligible(phaseState,u))return;
  phasePick(id);
  if(phaseState.selected!==id)return;
- phaseDrag={unitId:id,pointerId:e.pointerId,down:phaseCoordinates(e),origin:{x:u.x,y:u.y},moved:false,latest:null};
+ phaseDrag={unitId:id,pointerId:e.pointerId,down:phaseCoordinates(e),origin:{x:u.x,y:u.y},touchOffset:e.pointerType==='touch'?0.75:0,moved:false,latest:null};
  e.currentTarget.setPointerCapture(e.pointerId);
  if(e.pointerType==='touch')e.preventDefault();
 }
@@ -2946,7 +2948,7 @@ function phaseDragChargeProposal(foe,drop){
 }
 function phaseDragMove(e){
  if(!phaseDrag||phaseDrag.pointerId!==e.pointerId)return;
- const to=phaseDragPoint(e),diff=Math.hypot(to.x-phaseDrag.origin.x,to.y-phaseDrag.origin.y);
+ const to=phaseDragPoint(e),diff=Math.hypot(phaseCoordinates(e).x-phaseDrag.down.x,phaseCoordinates(e).y-phaseDrag.down.y);
  if(!phaseDrag.moved&&diff<.12)return; // évite qu'un simple toucher déplace une figurine.
  phaseDrag.moved=true;
  phaseDrag.latest=to;
@@ -3127,7 +3129,7 @@ function phaseRender(){
  }
  else if(ready)pe('phaseHelp').textContent=`Trajet valide : ${s.proposal.verdict.length.toFixed(2).replace('.',',')}″. ${s.proposal.chargeId?'Charge : contact entre socles, activation terminée.':'Confirmez ce déplacement ou choisissez une autre destination.'}`;
  else if(s.proposal)pe('phaseHelp').textContent=`Déplacement refusé : ${s.proposal.verdict.reason}. Choisissez une autre destination.`;
- else if(u)pe('phaseHelp').textContent=`Maintenez le clic ou le doigt sur ${u.id}. La ligne pointillée se plie automatiquement autour des décors ; la distance suit tous les segments. Relâchez pour valider, ou saisissez les coordonnées. Vert : autorisé ; ambre : au-delà de la moitié pour l’arc ; rouge : interdit. Charge : glissez votre socle sur l’ennemi (ou touchez-le).`;
+ else if(u)pe('phaseHelp').textContent=`Maintenez le clic ou le doigt sur ${u.id}. Sur téléphone, le point d’arrivée est affiché 0,75″ au-dessus du doigt. La ligne pointillée se plie automatiquement autour des décors ; la distance suit tous les segments. Relâchez pour valider, ou saisissez les coordonnées. Vert : autorisé ; ambre : au-delà de la moitié pour l’arc ; rouge : interdit. Charge : glissez votre socle sur l’ennemi (ou touchez-le).`;
  else pe('phaseHelp').textContent=`${phaseLabel(s.activeSide)} : choisissez une figurine non activée. Les figurines chargées ne peuvent pas s’activer.`;
  const svg=pe('phaseSvg');svg.replaceChildren();
  svg.append(pNode('rect',{width:1400,height:900,fill:'#163b35'}));
